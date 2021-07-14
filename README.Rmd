@@ -1,0 +1,94 @@
+---
+output: github_document
+---
+  
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+  
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  echo = FALSE
+)
+
+library(magrittr)
+
+main_repo <- "main-deploy"
+turma <- "202107-deploy"
+```
+
+## Informações importantes
+
+- [Clique aqui](https://github.com/curso-r/main-deploy/raw/master/material.zip)
+para baixar o material do curso
+
+- Pacotes necessários: `{tidyverse}`, `{plumber}`, `{golem}`
+
+- Nosso livro *Ciência de Dados em R*: [https://livro.curso-r.com/](https://livro.curso-r.com/)
+
+- Nosso blog: [https://curso-r.com/blog/](https://curso-r.com/blog/)
+
+## Dúvidas
+
+Fora do horário de aula ou monitoria:
+  
+- Perguntas gerais sobre o curso deverão ser feitas no Google Classroom
+
+- Perguntas sobre R, principalmente as que envolverem código, deverão ser
+enviadas no [nosso fórum](https://discourse.curso-r.com/)
+
+## Slides
+
+```{r}
+paths <- CursoRutils:::list_github_files(main_repo, "docs/", "pdf$")
+tibble::tibble(
+  slide = paths,
+  link = paste0("https://curso-r.github.io/", main_repo, "/", slide)
+) %>% 
+  knitr::kable()
+```
+
+## Scripts utilizados em aula
+
+Aqui colocamos scripts utilizados em aula que são novos ou que são versões
+modificadas do material básico da aula.
+
+```{r}
+pasta <- "arqs/"
+tibble::tibble(
+  script = fs::dir_ls(pasta),
+  link = paste0("https://curso-r.github.io/", turma, "/", pasta, script)
+) %>% 
+  knitr::kable()
+```
+
+## Material extra
+
+Referências extras comentadas nas aulas.
+
+```{r, message=FALSE}
+googlesheets4::gs4_deauth()
+"1SmCKCvJBff3CVty-xYKJ4NhEo2j6sUwkdET46vQisDY" %>% 
+  googledrive::as_id() %>% 
+  googlesheets4::read_sheet(turma) %>%
+  dplyr::mutate(link = glue::glue("[{desc}]({purrr::map_chr(url, utils::URLencode)})")) %>%
+  dplyr::select(-desc, -url) %>%
+  dplyr::arrange(aula) %>% 
+  knitr::kable(col.names = c("Aula", "Tema", "Descrição"))
+```
+
+## Trabalhos finais premiados
+
+(Em breve)
+
+## Redes sociais da Curso-R
+
+- Instagram: https://www.instagram.com/cursoo_r/
+  
+- Twitter: https://twitter.com/curso_r
+
+- Youtube: https://www.youtube.com/c/CursoR6/featured
+
+- Linkedin: https://www.linkedin.com/company/curso-r/
+  
+- Facebook: https://www.facebook.com/cursodeR
