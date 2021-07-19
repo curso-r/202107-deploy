@@ -286,7 +286,7 @@ content(resp)[[1]]
 # Swagger
 
 - Swagger é essencialmente uma API que ajuda a criar APIs, incluindo uma
-interface com **documentação** em http://localhost:8000/__swagger__/
+interface com **documentação** em http://localhost:8000/__docs__/
 
 ```{r, echo=FALSE, fig.align='center', dpi=130}
 knitr::include_graphics("static/swagger.png")

@@ -54,10 +54,10 @@ Aqui colocamos scripts utilizados em aula que são novos ou que são versões
 modificadas do material básico da aula.
 
 ```{r}
-pasta <- "arqs/"
+pasta <- "aula/"
 tibble::tibble(
   script = fs::dir_ls(pasta),
-  link = paste0("https://curso-r.github.io/", turma, "/", pasta, script)
+  link = paste0("https://github.com/curso-r/", turma, "/tree/master/", script)
 ) %>% 
   knitr::kable()
 ```
@@ -76,10 +76,6 @@ googlesheets4::gs4_deauth()
   dplyr::arrange(aula) %>% 
   knitr::kable(col.names = c("Aula", "Tema", "Descrição"))
 ```
-
-## Trabalhos finais premiados
-
-(Em breve)
 
 ## Redes sociais da Curso-R
 
