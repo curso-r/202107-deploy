@@ -54,7 +54,7 @@ knitr::include_graphics("static/cursor.png")
   - Levante para se **alongar** regularmente durante a aula
 
 ---
-# Na aula de hoje
+# Conteúdo
 
 - O que é deploy (implantação)
 
