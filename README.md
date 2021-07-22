@@ -34,10 +34,10 @@ Fora do horário de aula ou monitoria:
 Aqui colocamos scripts utilizados em aula que são novos ou que são
 versões modificadas do material básico da aula.
 
-| script              | link                                                                      |
-|:--------------------|:--------------------------------------------------------------------------|
-| aula/exemplo\_api   | <https://github.com/curso-r/202107-deploy/tree/master/aula/exemplo_api>   |
-| aula/exemplo\_api.R | <https://github.com/curso-r/202107-deploy/tree/master/aula/exemplo_api.R> |
+| script                   | link                                                                          |
+|:-------------------------|:------------------------------------------------------------------------------|
+| aula/01\_exemplo\_api.R  | <https://github.com/curso-r/202107-deploy/tree/master/aula/01_exemplo_api.R>  |
+| aula/02\_exemplo\_docker | <https://github.com/curso-r/202107-deploy/tree/master/aula/02_exemplo_docker> |
 
 ## Material extra
 
