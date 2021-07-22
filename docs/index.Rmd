@@ -62,15 +62,15 @@ knitr::include_graphics("static/cursor.png")
 
 - O pacote `{plumber}`
 
-- O que é uma máquina virtual
+- O que é Docker
 
-- O que é docker
+- O que é GitHub Actions
 
-- Como empacotar um dashboard
+- O que é GitHub Packages
 
 - O pacote `{golem}`
 
-- Como automatizar um deploy
+- Deploy na Google Cloud
 
 ---
 # Está tudo preparado?
@@ -176,9 +176,7 @@ knitr::include_graphics("static/pokeapi.png")
 
 ```{r}
 library(httr)
-
-resposta <- GET("https://pokeapi.co/api/v2/pokemon/ditto")
-resposta
+(resposta <- GET("https://pokeapi.co/api/v2/pokemon/ditto"))
 
 content(resposta)$moves[[1]]$move$name
 ```
@@ -266,7 +264,7 @@ do `{plumber}` no mesmo
 - Para implantar a API **localmente**, basta rodar os dois comandos a seguir
 
 ```{r, eval=FALSE}
-api <- plumb("arqs/exemplo_api.R")
+api <- plumb("arqs/01_exemplo_api.R")
 api$run(port = 8000)
 ```
 
@@ -361,24 +359,6 @@ componentes da máquina virtual
 - Para testar, acesse https://labs.play-with-docker.com/
 
 ---
-# O que é uma máquina virtual?
-
-> Máquina virtual (VM) é um software que provém a funcionalidade de um
-computador físico, mas apenas através de emulação
-
-- Normalmente uma máquina virtual emula um **sistema operacional** completo,
-desde um monitor até entradas USB
-
-- Um hipervisor usa software nativo para simular **hardware virtual**,
-permitindo que código seja executado sem saber que está em uma VM
-
-- Com uma VM é possível "criar" um computador Ubuntu dentro de um Windows e
-vice-versa, por exemplo
-
-- Diferentemente de um contêiner, VMs são pesadas e "profundas", dependendo de
-uma imagem (ISO) para instalar o sistema operacional
-
----
 # Docker vs. VM
 
 - Note as vantagens e desvantagens de cada arquitetura
@@ -443,12 +423,16 @@ arquivos associados e dá um nome para a mesma (argumento `-t`)
   - O argumento `--rm` limpa o armazenamento depois que tudo acaba
 
 ```{}
-cd arqs/exemplo_api/
+cd arqs/02_exemplo_docker/
 
 docker build -t exemplo .
 
 docker run -p 8000:8000 --rm exemplo
 ```
+
+---
+class: inverse, center, middle
+# GitHub Actions
 
 ---
 # Implantação contínua
@@ -467,8 +451,181 @@ recente/**estável** do software e colocá-la em produção
   - Existe uma série de serviços que detectam uma nova versão de um
   **repositório** e automaticamente criam atualizam a sua imagem
 
-- Hoje vamos falar sobre o **Google Cloud Build** porque ele se conecta em
-outros serviços que vamos usar
+- Hoje vamos falar sobre o **GitHub Actions** porque ele se conecta facilmente
+com o GitHub
+
+---
+# GitHub Actions
+
+> GitHub Actions ajuda a automatizar tarefas dentro de seu ciclo de vida de
+desenvolvimento de software https://docs.github.com/pt/actions
+
+- Um **workflow** não passa de um processo bem-definido que será executado no
+repositório ao qual ele pertence
+
+- Ele é definido a partir de um arquivo YAML dentro da pasta `.github/workflows`
+
+  - É comum definir workflows para testagem de pacotes, geração de documentação, 
+  atualização de dados, etc.
+  
+- O workflow é, essencialmente, um duende mágico que baixa o nosso repositório
+em um **servidor do GitHub** e executa os comandos especificados
+
+  - O plano gratuito já funciona para bastante coisa, mas cuidado com os
+  **custos** das máquinas MacOS
+
+---
+# Estrutura
+
+- Um workflow tem alguns componentes importantes:
+
+  - **Event**: gatilhos que ativam o workflow, podendo ser desde um push ao
+  repositório até uma hora do dia
+  
+  - **Job**: sequências completas de comandos que podem ser executadas
+  paralelamente entre si
+  
+  - **Step**: uma tarefa dentro de um job, composta por ações
+      
+      - **Use**: passos importados de outro repositório (úteis para setup)
+  
+  - **Action**: o átomo do workflow, um comando a ser executado pelo "duende
+  mágico"
+  
+- Também é comum definir **env**, variáveis de ambiente para o workflow
+
+---
+# Exemplo de workflow
+
+```yaml
+on: [push]                                              # Event
+jobs:
+  R-CMD-check:                                          # Job
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2                       # Use
+      - uses: r-lib/actions/setup-r@v1                  # Use
+      - name: Install dependencies                      # Step
+        run: |                                          # Action
+          install.packages(c("remotes", "rcmdcheck"))
+          remotes::install_deps(dependencies = TRUE)
+        shell: Rscript {0}
+      - name: Check                                     # Step
+        run: rcmdcheck::rcmdcheck(args = "--no-manual") # Action
+        shell: Rscript {0}
+```
+
+---
+# GitHub Packages
+
+> O Package Registry é um serviço de hospedagem que permite a publicação de
+pacotes https://docs.github.com/pt/packages
+
+- Antigamente, a única forma de publicar imagens Docker era pelo Docker Hub,
+mas agora temos o **Package Registry**
+
+- Com apenas um simples **Dockerfile na raiz** do repositório, é possível subir
+uma imagem Docker usando uma GH Action
+
+- Depois que a imagem estiver publicada, basta usar o comando abaixo no terminal
+para utilizá-la onde for necessário
+
+```sh
+docker pull ghcr.io/USUARIO/REPO
+docker run ghcr.io/USUARIO/REPO
+```
+
+- Basta modificar o comando `run` conforme a necessidade (portas, etc.)
+
+---
+# Publicação de imagem
+
+```yaml
+on: [push]
+jobs:
+  publish-image:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build the Docker image
+        run: |
+          docker build -t ghcr.io/USUARIO/REPO .
+          docker push ghcr.io/USUARIO/REPO
+```
+
+---
+class: inverse, center, middle
+# Shiny
+
+---
+# Shiny empacotado
+
+- Apps começam com uma ideia simples, mas vão **crescendo** até o ponto que não
+conseguimos mais entender onde estão os seus pedaços
+
+- Com **módulos**, é possível separar pedaços de um shiny em scripts separados, que
+são adicionados como funções dentro do app principal
+
+  - Um módulo pode usar funções de certo pacote, e às vezes esquecemos de checar
+  se ele está instalado quando o app for colocado em produção
+
+- Uma alternativa muito útil é desenvolver o shiny dentro de um **pacote**
+
+  - As **dependências** são checadas automaticamente
+  
+  - Os módulos se tornam **funções** do pacote
+  
+  - Tudo deve ficar **documentado** e organizado por padrão
+
+---
+# O pacote {golem}
+
+> `{golem}` é um framework opinionado para construir aplicações shiny prontas
+para produção https://engineering-shiny.org
+
+- O `{golem}` cria **templates** estruturadas que facilitam o desenvolvimento,
+configuração, manutenção e implantação de um dashboard shiny
+
+  - A template é um **pacote** R, importante pelos motivos destacados antes
+  
+  - Contém uma coleção de funções que **aceleram** tarefas repetitivas
+  
+  - Possui diversos **atalhos** para criar arquivos comuns
+  
+  - Traz funções que automatizam a preparação para o **deploy**
+
+- Eu pessoalmente acho a template muito carregada, mas muita gente gosta
+
+---
+# Exemplo de {golem}
+
+- A função `create_golem()` cria um projeto-pacote com toda a estrutura
+
+  - `R/` deve conter as funções, `dev/` ajuda a montar o shiny e `inst/` fica
+  com os recursos auxiliares
+
+```{r, eval=FALSE}
+golem::create_golem("arqs/04_exemplo_golem/", package_name = "exemplogolem")
+```
+
+- O primeiro passo é passar pelo arquivo `dev/01_start.R` para configurar o app
+
+- O segundo é desenvolver o app (`dev/02_dev.R` pode ajudar)
+
+- O último passo é criar a estrutura para deploy com `dev/03_deploy.R`
+
+  - Nunca esquecer de instalar o app e testar com `exemplogolem::run_app()`
+
+---
+
+```{r, echo=FALSE}
+fs::dir_tree("../arqs/04_exemplo_golem/")
+```
 
 ---
 class: inverse, center, middle
@@ -495,25 +652,46 @@ computadores que podem ser alugados
   preocuparmos com a **manutenção** do hardware e do software
 
 ---
-# Exemplo de CD no GCP
+# Preparação para deploy
 
-1. Menu Lateral
+- Como o shiny é um pacote, podemos seguir os passos de **desenvolvimento** de
+pacotes antes de colocá-lo em produção
 
-1. Cloud Build
+  - Rodar `devtools::check()` para garantir que tudo está **em ordem**
 
-1. **Acionadores**
+  - **Instalar** o app com `devtools::install()`
+  
+  - **Executar o app** em uma sessão limpa com `exemplodeploy::run_app()`
 
-1. Conectar repositório
+- Quando o shiny estiver pronto, adicionar um **Dockerfile** com `add_dockerfile()`
 
-1. GitHub
+  - O Dockerfile **não é otimizado** para o Google Cloud e isso pode implicar em
+  alguns problemas
+  
+  - Não esquecer de usar uma GH Action para criar um **GH Package**!
 
-1. Criar **gatilho**
+---
 
-1. Editar gatilho
+```{r, eval=FALSE}
+golem::add_dockerfile()
+```
 
-1. Verificar progresso
-
-1. Garantir sucesso
+```{}
+FROM rocker/r-ver:4.1.0
+RUN apt-get update && apt-get install -y  git-core libcurl4-openssl-dev libgit2-dev libicu-dev libssl-dev libxml2-dev make pandoc pandoc-citeproc && rm -rf /var/lib/apt/lists/*
+RUN echo "options(repos = c(CRAN = 'https://cran.rstudio.com/'), download.file.method = 'libcurl', Ncpus = 4)" >> /usr/local/lib/R/etc/Rprofile.site
+RUN R -e 'install.packages("remotes")'
+RUN Rscript -e 'remotes::install_version("shiny",upgrade="never", version = "1.6.0")'
+RUN Rscript -e 'remotes::install_version("config",upgrade="never", version = "0.3.1")'
+RUN Rscript -e 'remotes::install_version("golem",upgrade="never", version = "0.3.1")'
+RUN mkdir /build_zone
+ADD . /build_zone
+WORKDIR /build_zone
+RUN R -e 'remotes::install_local(upgrade="never")'
+RUN rm -rf /build_zone
+EXPOSE 80
+CMD R -e "options('shiny.port'=80,shiny.host='0.0.0.0');exemplodeploy::run_app()"
+```
 
 ---
 # Exemplo de deploy no GCP
@@ -575,210 +753,6 @@ todos os problemas pelo qual o programa pode passar
   - Estamos usando a metodologia **XGH**, então testamos só depois de implantar
 
 - Alguns testes: corretude, carga, responsividade, etc.
-
----
-# Testando a API
-
-```{r, eval=FALSE}
-params <- list(msg = "Testado!")
-resp <- GET("http://34.66.246.102:8000/echo", query = params)
-
-content(resp)[[1]]
-```
-
-```{r, echo=FALSE}
-"A mensagem é: 'Testado!'"
-```
-
-
-```{r, eval=FALSE}
-params <- list(a = 2, b = 6)
-resp <- POST("http://34.66.246.102:8000/sum", body = params, encode = "json")
-
-content(resp)[[1]]
-```
-
-```{r, echo=FALSE}
-8
-```
-
-
-- Ainda seria possível associar um domínio a esses IPs, mas isso (configuração
-de CDN) foge do tópico da aula de hoje
-
----
-class: inverse, center, middle
-# Shiny
-
----
-# Shiny empacotado
-
-- Apps começam com uma ideia simples, mas vão **crescendo** até o ponto que não
-conseguimos mais entender onde estão os seus pedaços
-
-- Com **módulos**, é possível separar pedaços de um shiny em scripts separados, que
-são adicionados como funções dentro do app principal
-
-  - Um módulo pode usar funções de certo pacote, e às vezes esquecemos de checar
-  se ele está instalado quando o app for colocado em produção
-
-- Uma alternativa muito útil é desenvolver o shiny dentro de um **pacote**
-
-  - As **dependências** são checadas automaticamente
-  
-  - Os módulos se tornam **funções** do pacote
-  
-  - Tudo deve ficar **documentado** e organizado por padrão
-
----
-# O pacote {golem}
-
-> `{golem}` é um framework opinionado para construir aplicações shiny prontas
-para produção https://engineering-shiny.org
-
-- O `{golem}` cria **templates** estruturadas que facilitam o desenvolvimento,
-configuração, manutenção e implantação de um dashboard shiny
-
-  - A template é um **pacote** R, importante pelos motivos destacados antes
-  
-  - Contém uma coleção de funções que **aceleram** tarefas repetitivas
-  
-  - Possui diversos **atalhos** para criar arquivos comuns
-  
-  - Traz funções que automatizam a preparação para o **deploy**
-
-- Eu pessoalmente acho a template muito carregada, mas muita gente gosta
-
----
-# Exemplo de {golem}
-
-- A função `create_golem()` cria um projeto-pacote com toda a estrutura
-
-  - `R/` deve conter as funções, `dev/` ajuda a montar o shiny e `inst/` fica
-  com os recursos auxiliares
-
-```{r, eval=FALSE}
-library(golem)
-
-create_golem("arqs/exemplo_shiny/", package_name = "exemplo")
-```
-
-- O primeiro passo é passar pelo arquivo `dev/01_start.R` para configurar o app
-
-- O segundo é desenvolver o app (`dev/02_dev.R` pode ajudar)
-
-- O último passo é criar a estrutura para deploy com `dev/03_deploy.R`
-
-  - Nunca esquecer de instalar o app e testar com `exemplo::run_app()`
-
----
-
-```{r, echo=FALSE}
-fs::dir_tree("../arqs/exemplo_shiny/")
-```
-
----
-class: inverse, center, middle
-# Deploy II
-
----
-# Preparação para deploy
-
-- Como o shiny é um pacote, podemos seguir os passos de **desenvolvimento** de
-pacotes antes de colocá-lo em produção
-
-  - Rodar `devtools::check()` para garantir que tudo está **em ordem**
-
-  - **Instalar** o app com `devtools::install()`
-  
-  - **Executar o app** em uma sessão limpa com `exemplo::run_app()`
-
-- Quando o shiny estiver pronto, adicionar um **Dockerfile** com `add_dockerfile()`
-
-  - O Dockerfile **não é otimizado** para o Google Cloud e isso pode implicar em
-  alguns problemas
-  
-  - Quando necessário, edite o Dockerfile para **adequá-lo** ao ambiente real
-  onde ele será implantado
-
----
-
-```{r, eval=FALSE}
-add_dockerfile()
-```
-
-```{}
-FROM rocker/r-ver:4.0.2
-RUN apt-get update && apt-get install -y  git-core libcurl4-openssl-dev libgit2-dev libssh2-1-dev libssl-dev libxml2-dev make pandoc pandoc-citeproc zlib1g-dev && rm -rf /var/lib/apt/lists/*
-RUN echo "options(repos = c(CRAN = 'https://cran.rstudio.com/'), download.file.method = 'libcurl')" >> /usr/local/lib/R/etc/Rprofile.site
-RUN R -e 'install.packages("remotes")'
-RUN R -e 'remotes::install_github("r-lib/remotes", ref = "97bbf81")'
-RUN Rscript -e 'remotes::install_version("config",upgrade="never", version = "0.3")'
-RUN Rscript -e 'remotes::install_version("golem",upgrade="never", version = "0.2.1")'
-RUN Rscript -e 'remotes::install_version("shiny",upgrade="never", version = "1.5.0")'
-RUN Rscript -e 'remotes::install_version("attempt",upgrade="never", version = "0.3.1")'
-RUN Rscript -e 'remotes::install_version("DT",upgrade="never", version = "0.13")'
-RUN Rscript -e 'remotes::install_version("glue",upgrade="never", version = "1.4.1")'
-RUN Rscript -e 'remotes::install_version("htmltools",upgrade="never", version = "0.5.0")'
-RUN mkdir /build_zone
-ADD . /build_zone
-WORKDIR /build_zone
-RUN R -e 'remotes::install_local(upgrade="never")'
-EXPOSE 80
-CMD R -e "options('shiny.port'=80,shiny.host='0.0.0.0');exemplo::run_app()"
-```
-
----
-# Exemplo de CD no GCP
-
-1. Menu Lateral
-
-1. Cloud Build
-
-1. **Acionadores**
-
-1. Conectar repositório
-
-1. GitHub
-
-1. Criar **gatilho**
-
-1. Editar gatilho
-
-1. Verificar progresso
-
-1. Garantir sucesso
-
----
-# Exemplo de deploy no GCP
-
-1. Menu Lateral
-
-1. Google Compute Engine
-
-1. Criar **instância**
-
-1. Implante uma **imagem** de contêiner nesta instância de VM
-
-1. Menu Lateral
-
-1. Rede VPC
-
-1. Endereços **IP externos**
-
-1. Tipo: Temporário > **Estático**
-
----
-# Testando o shiny
-
-- **Navegar** para o link correpondente ao IP: http://104.198.249.27
-
-  - A **porta 80** é a padrão para o tráfego HTTP, então não há necessidade de
-  especificar nada
-
-```{r, echo=FALSE, fig.align='center', dpi=160}
-knitr::include_graphics("static/shiny.png")
-```
 
 ---
 class: inverse, center, middle
