@@ -1,6 +1,6 @@
 FROM trestletech/plumber
 
-COPY exemplo_api.R /
+COPY "01_exemplo_api.R" /
 EXPOSE 8080/tcp
 
-CMD ["/exemplo_api.R"]
+CMD ["/01_exemplo_api.R"]
